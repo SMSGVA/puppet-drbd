@@ -3,11 +3,34 @@ resource <%= name %> {
   protocol  <%= protocol %>;
   device    <%= device %>;
   disk      <%= disk %>;
-  meta-disk internal;
+  meta-disk <%= metadisk %>;
 
   net {
     cram-hmac-alg sha1;
+<% if secret -%>
     shared-secret "<%= secret %>";
+<% end -%>
+<% if allow_two -%>
+    allow-two-primaries;
+<% end -%>
+  }
+<% if primary_on -%>
+  startup {
+    become-primary-on <%= primary_on %>;
+  }
+<% end -%>
+  handlers {
+<% if fence_peer -%>
+    fence-peer "<%= fence_peer %>";
+<% end -%>
+<% if after_resync -%>
+    after-resync-target "<%= after_resync %>";
+<% end -%>
+  }
+  disk {
+<% if fencing -%>
+    fencing <%= fencing %>;
+<% end -%>
   }
 
   syncer {

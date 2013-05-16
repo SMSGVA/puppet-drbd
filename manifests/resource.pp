@@ -25,10 +25,18 @@ Parameters:
 - *$disk*: device to use as DRBD's low-level device.
 - *$device*: name of the device defined by the current resource. Defaults to
   /dev/drbd0.
+- *metadisk*: location of metadata. Defaults to internal.
 - *$protocol*: protocol identifier for this resource (A, B or C). Defaults to
   C.
 - *$manage*: whether this DRBD resource must be activated by puppet, if it
   happens to be down. Defaults to "true".
+- *primary_on*: Which host(s) should the resource become primary on. Defaults
+  to "false" so neither host becomes primary at resource initialization.
+- *allow_two*: whether to allow resource to be primary on both hosts. Defaults
+  to "false".
+- *fence_peer*: script capable of fencing the resource.
+- *after_resync*: script to unfence the resource.
+- *fencing*: type of fencing to use. Defaults to "resource-only".
 
 Example usage:
 
@@ -48,7 +56,7 @@ See also:
  - drbd.conf(5)
 
 */
-define drbd::resource ($host1, $host2, $ip1, $ip2, $port='7789', $secret, $disk, $device='/dev/drbd0', $protocol='C', $manage='true') {
+define drbd::resource ($host1, $host2, $ip1, $ip2, $port='7789', $secret=false, $disk, $device='/dev/drbd0', $metadisk='internal', $protocol='C', $manage=true, $primary_on=false, $allow_two=false, $fence_peer='/usr/lib/drbd/crm-fence-peer.sh', $after_resync='/usr/lib/drbd/crm-unfence-peer.sh', $fencing='resource-only') {
 
   drbd::config { "ZZZ-resource-${name}":
     content => template("drbd/drbd.conf.erb"),

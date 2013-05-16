@@ -169,12 +169,16 @@ class drbd::base {
       # this module is included in linux-image-* (kernel) package
       kmod::install {'drbd': }
 
+      exec { 'drbd-config-check':
+        command     => 'drbdadm dump',
+        refreshonly => true,
+      }
       service { "drbd":
         ensure    => running,
         hasstatus => true,
         restart   => "/etc/init.d/drbd reload",
         enable    => true,
-        require   => [Package["drbd"], Kmod::Install['drbd']],
+        require   => [Package["drbd"], Exec['drbd-config-check'], Kmod::Install['drbd']],
       }
     }
 

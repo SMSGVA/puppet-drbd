@@ -18,10 +18,25 @@ Example usage:
   }
 
 */
-define drbd::lvm ($vg, $size) {
+define drbd::lvm ($ensure=present, $vg, $size) {
 
-  exec { "create LVM volume $name":
-    command => "lvcreate -L $size -n drbd-${name} $vg",
-    creates => "/dev/${vg}/drbd-${name}",
-  }
+    case $ensure {
+        present: {
+            exec { "create LVM volume $name":
+                command => "lvcreate -L $size -n drbd-${name} $vg",
+                creates => "/dev/${vg}/drbd-${name}",
+            }
+        }
+        absent: {
+            exec { "remove LVM volume $name":
+                command => "lvremove /dev/${vg}/drbd-${name}",
+                onlyif  => [
+                    "test -b /dev/${vg}/drbd-${name}",
+                    "drbdadm cstate ${name} | grep -q Unconfigured",
+                    "drbdadm dstate ${name} | grep -q Unconfigured",
+                ],
+            }
+        }
+    }
+
 }

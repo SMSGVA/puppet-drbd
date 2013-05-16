@@ -15,6 +15,7 @@ commands:
 
 Parameters:
 - *$name*: name of the resource.
+- *ensure*: create or remove the resource. Defaults to present.
 - *$host1*: one of the host's name
 - *$host2*: the other hosts's name
 - *$ip1*: $host1's IP address
@@ -56,36 +57,62 @@ See also:
  - drbd.conf(5)
 
 */
-define drbd::resource ($host1, $host2, $ip1, $ip2, $port='7789', $secret=false, $disk, $device='/dev/drbd0', $metadisk='internal', $protocol='C', $manage=true, $primary_on=false, $allow_two=false, $fence_peer='/usr/lib/drbd/crm-fence-peer.sh', $after_resync='/usr/lib/drbd/crm-unfence-peer.sh', $fencing='resource-only') {
+define drbd::resource ($ensure=present, $host1, $host2, $ip1, $ip2, $port='7789', $secret=false, $disk, $device='/dev/drbd0', $metadisk='internal', $protocol='C', $manage=true, $primary_on=false, $allow_two=false, $fence_peer='/usr/lib/drbd/crm-fence-peer.sh', $after_resync='/usr/lib/drbd/crm-unfence-peer.sh', $fencing='resource-only') {
 
   drbd::config { "ZZZ-resource-${name}":
     content => template("drbd/drbd.conf.erb"),
   }
+  case $ensure {
+    present: {
 
-  if $manage == 'true' {
+      if $manage == true {
 
-    # create metadata on device, except if resource seems already initalized.
-    exec { "intialize DRBD metadata for $name":
-      command => "drbdadm create-md $name",
-      onlyif  => "test -e $disk",
-      unless  => "drbdadm dump-md $name || (drbdadm cstate $name | egrep -q '^(Sync|Connected)')",
-      before  => Service["drbd"],
-      require => [
-        Exec["load drbd module"],
-        Drbd::Config["ZZZ-resource-${name}"],
-      ],
+        # create metadata on device, except if resource seems already initalized.
+        exec { "intialize DRBD metadata for $name":
+          command => "drbdadm create-md $name",
+          onlyif  => "test -e $disk",
+          unless  => "drbdadm dump-md $name || (drbdadm cstate $name | egrep -q '^(Sync|Connected)')",
+          before  => Service["drbd"],
+          require => [
+          Exec["load drbd module"],
+            Drbd::Config["ZZZ-resource-${name}"],
+          ],
+        }
+
+        exec { "enable DRBD resource $name":
+          command => "drbdadm up $name",
+          onlyif  => "drbdadm dstate $name | egrep -q '^Diskless/|^Unconfigured'",
+          before  => Service["drbd"],
+          require => [
+            Exec["intialize DRBD metadata for $name"],
+          Exec["load drbd module"],
+          ],
+        }
+
+      }
     }
-
-    exec { "enable DRBD resource $name":
-      command => "drbdadm up $name",
-      onlyif  => "drbdadm dstate $name | egrep -q '^Diskless/|^Unconfigured'",
-      before  => Service["drbd"],
-      require => [
-        Exec["intialize DRBD metadata for $name"],
-        Exec["load drbd module"],
-      ],
+    absent: {
+      Drbd::Config[ "ZZZ-resource-${name}" ] {
+        ensure  => absent,
+        require => Exec[ "remove DRBD metadata for $name" ],
+      }
+      exec { "disable DRBD resource $name":
+        command => "drbdadm down $name",
+        unless  => [
+          "drbdadm dstate $name | grep -q Unconfigured",
+          "drbdadm role $name | grep -q Primary",
+        ],
+        onlyif  => "drbdadm role $name 1>/dev/null 2>/dev/null",
+        notify  => Exec[ "remove DRBD metadata for $name" ],
+        before  => Service['drbd'],
+      }
+      exec { "remove DRBD metadata for $name":
+        command     => "drbdadm wipe-md $name",
+        onlyif      => "drbdadm dstate $name | grep -q Unconfigured",
+        refreshonly => true,
+        require     => Exec[ "disable DRBD resource $name" ],
+      }
     }
-
   }
 
   iptables { "allow drbd from $host1 on port $port":

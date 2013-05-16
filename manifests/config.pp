@@ -22,9 +22,10 @@ See also:
  - drbd.conf(5)
 
 */
-define drbd::config ($content) {
+define drbd::config ($ensure=present, $content) {
 
   file { "/etc/drbd.conf.d/${name}.conf":
+    ensure  => $ensure,
     mode    => "0600",
     owner   => "root",
     content => "# file managed by puppet\n\n${content}\n",

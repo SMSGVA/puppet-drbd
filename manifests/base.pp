@@ -124,6 +124,27 @@ class drbd::base {
           }
 
         }
+        '7': {
+          package { 'drbd8-utils':
+            ensure  => present,
+            alias   => 'drbd',
+          }
+
+        }
+        'testing/unstable': {
+          package { 'drbd8-utils':
+            ensure  => present,
+            alias   => 'drbd',
+          }
+
+        }
+        'testing': {
+          package { 'drbd8-utils':
+            ensure  => present,
+            alias   => 'drbd',
+          }
+
+        }
       }
     }
 

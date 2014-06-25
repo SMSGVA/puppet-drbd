@@ -57,7 +57,7 @@ See also:
  - drbd.conf(5)
 
 */
-define drbd::resource ($ensure=present, $host1, $host2, $ip1, $ip2, $port='7789', $secret=false, $disk, $device='/dev/drbd0', $metadisk='internal', $protocol='C', $manage=true, $primary_on=false, $allow_two=false, $fence_peer='/usr/lib/drbd/crm-fence-peer.sh', $after_resync='/usr/lib/drbd/crm-unfence-peer.sh', $fencing='resource-only') {
+define drbd::resource ($ensure=present, $host1, $host2, $ip1, $ip2, $port='7789', $secret=false, $disk, $device='/dev/drbd0', $metadisk='internal', $protocol='C', $manage=true, $primary_on=false, $allow_two=false, $fence_peer=false, $after_resync=false, $fencing='resource-only') {
 
   drbd::config { "ZZZ-resource-${name}":
     content => template("drbd/drbd.conf.erb"),
